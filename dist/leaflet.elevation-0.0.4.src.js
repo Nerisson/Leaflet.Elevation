@@ -134,12 +134,16 @@ L.Control.Elevation = L.Control.extend({
             .style("pointer-events", "none")
             .attr("class", "mouse-focus-label-y");
 
+
+
         if (this._data) {
             this._applyData();
         }
+        //this._processCumulativeElevation();
 
         return container;
     },
+
 
     _dragHandler: function() {
 
@@ -465,6 +469,7 @@ L.Control.Elevation = L.Control.extend({
         var coords = d3.mouse(this._background.node());
         var opts = this.options;
 
+
         var item = this._data[this._findItemForX(coords[0])],
             alt = item.altitude,
             dist = item.dist,
@@ -540,6 +545,7 @@ L.Control.Elevation = L.Control.extend({
             }
 
         }
+        this._map.panTo(ll);
 
     },
 
@@ -634,7 +640,21 @@ L.Control.Elevation = L.Control.extend({
         if (d && d._latlngs) {
             this._addGPXdata(d._latlngs);
         }
+        this._processCumulativeElevation();
     },
+
+    _processCumulativeElevation: function() {
+      var alti = this._data[0].altitude;
+      var dPlus = 0;
+      this._data = this._data.map(elem => {
+        var diff = Math.max(0, elem.altitude-alti);
+        alti = elem.altitude;
+        dPlus += diff;
+        elem.cumulativeElevation = dPlus;
+        return elem;
+      });
+    },
+
 
     /*
      * Calculates the full extent of the data array
@@ -698,9 +718,11 @@ L.Control.Elevation = L.Control.extend({
 
         var alt = item.altitude,
             dist = item.dist,
+            cumulativeElevation = item.cumulativeElevation,
             ll = item.latlng,
-            numY = opts.hoverNumber.formatter(alt, opts.hoverNumber.decimalsY),
-            numX = opts.hoverNumber.formatter(dist, opts.hoverNumber.decimalsX);
+            numY  = opts.hoverNumber.formatter(alt, opts.hoverNumber.decimalsY),
+            numYC  = opts.hoverNumber.formatter(cumulativeElevation, opts.hoverNumber.decimalsY),
+            numX  = opts.hoverNumber.formatter(dist, opts.hoverNumber.decimalsX);
 
         if (opts.imperial) {
             this._focuslabelX.attr("x", xCoordinate)
@@ -710,7 +732,7 @@ L.Control.Elevation = L.Control.extend({
                 .text(numX + " mi");
         } else {
             this._focuslabelX.attr("x", xCoordinate)
-                .text(numY + " m");
+                .text(numY + " m / "+numYC+" m");
             this._focuslabelY.attr("y", this._height() - 5)
                 .attr("x", xCoordinate)
                 .text(numX + " km");
